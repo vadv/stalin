@@ -11,16 +11,18 @@ import (
 
 type Transport struct {
 	Graphite    *GraphiteTransport
+	OpentsDB    *OpentsDBTransport
 	Resender    *ResenderTransport
 	Pg          *PgTransport
 	useGraphite bool
+	useOpentsDB bool
 	useResender bool
 	usePg       bool
 	isSender    bool
 	stat        *Stat
 }
 
-func NewTransport(graphiteaddr, resenderaddr, pgconstring, pgquery string, pgpool int, graphiteinterval, resenderinterval time.Duration, statistictime int) (*Transport, error) {
+func NewTransport(graphiteaddr, opentsdbaddr, resenderaddr, pgconstring, pgquery string, pgpool int, graphiteinterval, opentsdbinterval, resenderinterval time.Duration, statistictime int) (*Transport, error) {
 
 	s := &Stat{StatTime: statistictime}
 	t := &Transport{stat: s}
@@ -37,6 +39,14 @@ func NewTransport(graphiteaddr, resenderaddr, pgconstring, pgquery string, pgpoo
 			return nil, err
 		}
 		t.useGraphite = true
+	}
+
+	if opentsdbaddr != "" {
+		t.OpentsDB, err = NewOpentsDB(opentsdbaddr, opentsdbinterval, s)
+		if err != nil {
+			return nil, err
+		}
+		t.useOpentsDB = true
 	}
 
 	if resenderaddr != "" {
@@ -88,13 +98,16 @@ func (t *Transport) Send(msg *riemann.Msg) {
 		if t.useResender {
 			go t.Resender.Send(msg)
 		}
-		if t.useGraphite || t.usePg {
+		if t.useGraphite || t.usePg || t.useOpentsDB {
 			for _, event := range msg.GetEvents() {
 				if t.useGraphite {
 					go t.Graphite.Send(event)
 				}
 				if t.usePg {
 					go t.Pg.Send(event)
+				}
+				if t.useOpentsDB {
+					go t.OpentsDB.Send(event)
 				}
 			}
 		}

@@ -14,6 +14,8 @@ type Stat struct {
 	qGraphite int
 	Postgres  int
 	qPostgres int
+	OpentsDB  int
+	qOpentsDB int
 	Resend    int
 	qResend   int
 	mutex     sync.RWMutex
@@ -59,6 +61,19 @@ func (s *Stat) doneGraphite() {
 	s.qGraphite--
 }
 
+func (s *Stat) inOpentsDB() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.qOpentsDB++
+}
+
+func (s *Stat) doneOpentsDB() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.OpentsDB++
+	s.qOpentsDB--
+}
+
 func (s *Stat) inResend() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -77,6 +92,7 @@ func (s *Stat) clear() {
 	defer s.mutex.Unlock()
 	s.Postgres = 0
 	s.Graphite = 0
+	s.OpentsDB = 0
 	s.Resend = 0
 	s.Input = 0
 }
@@ -84,9 +100,9 @@ func (s *Stat) clear() {
 func (s *Stat) print() {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	log.Printf("[Statistics] Input: [%6.2f/%v], Resend: [%6.2f/%v], Graphite: [%6.2f/%v], Pg: [%6.2f/%v]",
+	log.Printf("[Statistics] Input: [%6.2f/%v], Resend: [%6.2f/%v], Graphite: [%6.2f/%v], OpentsDB:[%6.2f/%v], Pg: [%6.2f/%v]",
 		float64(s.Input)/float64(s.StatTime), s.qInput, float64(s.Resend)/float64(s.StatTime), s.qResend,
-		float64(s.Graphite)/float64(s.StatTime), s.qGraphite, float64(s.Postgres)/float64(s.StatTime), s.qPostgres)
+		float64(s.Graphite)/float64(s.StatTime), s.qGraphite, float64(s.OpentsDB)/float64(s.StatTime), s.qOpentsDB, float64(s.Postgres)/float64(s.StatTime), s.qPostgres)
 }
 
 // todo: send to graphite metric

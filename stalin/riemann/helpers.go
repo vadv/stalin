@@ -75,3 +75,17 @@ func (m *Event) ToGraphite() (string, error) {
 	// todo: микрооптимизации по формату metric
 	return fmt.Sprintf("%s %v %v\n", m.GetGraphiteService(), metric, m.GetTime()), nil
 }
+
+func (m *Event) GetOpentsDBService() string {
+	service := strings.Replace(*m.Service, " ", ".", -1)
+	service = strings.Replace(service, ",", "", -1) // нечитаемый символ
+	return service
+}
+
+func (m *Event) ToOpentsDB() (string, error) {
+	metric, err := m.GetMetric()
+	if err != nil {
+		return "", ErrNoMetric
+	}
+	return fmt.Sprintf("put %s %v %v host=%v\n", m.GetOpentsDBService(), m.GetTime(), metric, m.GetHost()), nil
+}
