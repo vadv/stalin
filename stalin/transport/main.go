@@ -3,6 +3,7 @@ package transport
 import (
 	"code.google.com/p/goprotobuf/proto"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"stalin/riemann"
@@ -29,7 +30,7 @@ func NewTransport(graphiteaddr, opentsdbaddr, resenderaddr, pgconstring, pgquery
 
 	err := errors.New("")
 
-	if graphiteaddr != "" || resenderaddr != "" || pgconstring != "" {
+	if graphiteaddr != "" || resenderaddr != "" || pgconstring != "" || opentsdbaddr != "" {
 		t.isSender = true
 	}
 
@@ -38,6 +39,7 @@ func NewTransport(graphiteaddr, opentsdbaddr, resenderaddr, pgconstring, pgquery
 		if err != nil {
 			return nil, err
 		}
+		fmt.Println("Use graphite", graphiteaddr)
 		t.useGraphite = true
 	}
 
@@ -46,6 +48,7 @@ func NewTransport(graphiteaddr, opentsdbaddr, resenderaddr, pgconstring, pgquery
 		if err != nil {
 			return nil, err
 		}
+		fmt.Println("Use opentsdb", opentsdbaddr)
 		t.useOpentsDB = true
 	}
 
@@ -54,6 +57,7 @@ func NewTransport(graphiteaddr, opentsdbaddr, resenderaddr, pgconstring, pgquery
 		if err != nil {
 			return nil, err
 		}
+		fmt.Println("Use resender", resenderaddr)
 		t.useResender = true
 	}
 
@@ -62,6 +66,7 @@ func NewTransport(graphiteaddr, opentsdbaddr, resenderaddr, pgconstring, pgquery
 		if err != nil {
 			return nil, err
 		}
+		fmt.Println("Use pgsql", pgconstring)
 		t.usePg = true
 	}
 

@@ -79,6 +79,7 @@ func (m *Event) ToGraphite() (string, error) {
 func (m *Event) GetOpentsDBService() string {
 	service := strings.Replace(*m.Service, " ", ".", -1)
 	service = strings.Replace(service, ",", "", -1) // нечитаемый символ
+	service = strings.Replace(service, "%", "percent", -1)
 	return service
 }
 
@@ -87,5 +88,5 @@ func (m *Event) ToOpentsDB() (string, error) {
 	if err != nil {
 		return "", ErrNoMetric
 	}
-	return fmt.Sprintf("put %s %v %v host=%v\n", m.GetOpentsDBService(), m.GetTime(), metric, m.GetHost()), nil
+	return fmt.Sprintf("put %s %v %v host=%v tag=test \n", m.GetOpentsDBService(), m.GetTime(), metric, m.GetHost()), nil
 }
