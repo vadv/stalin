@@ -73,6 +73,10 @@ func (g *ResenderTransport) ReceiveAndTick() {
 
 func (r *ResenderTransport) Send(msg *riemann.Msg) {
 	r.stat.inResend()
+	if r.stat.getResend() > r.stat.MaxQueue {
+		log.Printf("Drop message for resender. MaxQueue: %v, Queue: %v\n", r.stat.MaxQueue, r.stat.getResend())
+		return
+	}
 	buf := &bytes.Buffer{}
 	enc := riemann.NewEncoder(buf)
 	enc.EncodeMsg(msg)

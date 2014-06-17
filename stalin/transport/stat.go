@@ -18,6 +18,7 @@ type Stat struct {
 	qResend   int
 	mutex     sync.RWMutex
 	StatTime  int
+	MaxQueue  int
 }
 
 func (s *Stat) inInput() {
@@ -33,6 +34,12 @@ func (s *Stat) doneInput() {
 	s.qInput--
 }
 
+func (s *Stat) getInput() int {
+	s.mutex.RLock()
+	defer s.mutex.Unlock()
+	return s.qInput
+}
+
 func (s *Stat) inPostgres() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -44,6 +51,12 @@ func (s *Stat) donePostgres() {
 	defer s.mutex.Unlock()
 	s.Postgres++
 	s.qPostgres--
+}
+
+func (s *Stat) getPostgres() int {
+	s.mutex.RLock()
+	defer s.mutex.Unlock()
+	return s.qPostgres
 }
 
 func (s *Stat) inGraphite() {
@@ -59,6 +72,12 @@ func (s *Stat) doneGraphite() {
 	s.qGraphite--
 }
 
+func (s *Stat) getGraphite() int {
+	s.mutex.RLock()
+	defer s.mutex.Unlock()
+	return s.qGraphite
+}
+
 func (s *Stat) inResend() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -70,6 +89,12 @@ func (s *Stat) doneResend() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.qResend++
+}
+
+func (s *Stat) getResend() int {
+	s.mutex.RLock()
+	defer s.mutex.Unlock()
+	return s.qResend
 }
 
 func (s *Stat) clear() {

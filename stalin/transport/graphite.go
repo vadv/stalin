@@ -71,6 +71,10 @@ func (g *GraphiteTransport) ReceiveAndTick() {
 
 func (g *GraphiteTransport) Send(event *riemann.Event) {
 	g.stat.inGraphite()
+	if g.stat.getGraphite() > g.stat.MaxQueue {
+		log.Printf("Drop message for graphite. MaxQueue: %v, Queue: %v\n", g.stat.MaxQueue, g.stat.getGraphite())
+		return
+	}
 	graphitemsg, err := event.ToGraphite()
 	if err == nil {
 		g.e <- []byte(graphitemsg)

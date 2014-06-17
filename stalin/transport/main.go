@@ -22,7 +22,7 @@ type Transport struct {
 
 func NewTransport(graphiteaddr, resenderaddr, pgconstring, pgquery string, pgpool int, graphiteinterval, resenderinterval time.Duration, statistictime int) (*Transport, error) {
 
-	s := &Stat{StatTime: statistictime}
+	s := &Stat{StatTime: statistictime, MaxQueue: 100000}
 	t := &Transport{stat: s}
 
 	err := errors.New("")

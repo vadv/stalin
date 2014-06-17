@@ -63,5 +63,9 @@ func (p *PgTransport) EventToPG(event *riemann.Event) {
 
 func (p *PgTransport) Send(event *riemann.Event) {
 	p.stat.inPostgres()
+	if p.stat.getPostgres() > p.stat.MaxQueue {
+		log.Printf("Drop message for postgresql. MaxQueue: %v, Queue: %v\n", p.stat.MaxQueue, p.stat.getPostgres())
+		return
+	}
 	p.EventToPG(event)
 }
