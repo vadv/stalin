@@ -1,0 +1,11 @@
+[MyMultiDecoder]
+type = "MultiDecoder"
+order = ["MyJsonDecoder", "MyProtobufDecoder"]
+
+[MyMultiDecoder.delegates.MyJsonDecoder]
+type = "JsonDecoder"
+encoding_name = "JSON"
+
+[MyMultiDecoder.delegates.MyProtobufDecoder]
+type = "ProtobufDecoder"
+encoding_name = "PROTOCOL_BUFFER"

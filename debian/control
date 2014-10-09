@@ -2,10 +2,10 @@ Source: undev-stalin
 Section: utils
 Priority: extra
 Maintainer: Dmitry Vasiliev
-Build-Depends: debhelper (>= 8.0.0), golang-go
+Build-Depends: debhelper (>= 8.0.0), golang-go-1.3
 Standards-Version: 3.9.4
 
 Package: undev-stalin
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Riemann server
+Description: Riemann messenger

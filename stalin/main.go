@@ -2,43 +2,38 @@ package main
 
 import (
 	"flag"
-	"log"
-	"net"
+	"os"
+	"os/signal"
+	"path/filepath"
 	"runtime"
-	"stalin/transport"
-)
-
-var (
-	bindto            = flag.String("Bind", "0.0.0.0:5555", "Listen riemann events")
-	resendaddr        = flag.String("ResendAdr", "", "Resend to next riemann")
-	resendflushtime   = flag.Duration("ResenderFlush", 1000000000, "Flush every")
-	graphiteaddr      = flag.String("GraphiteAdr", "", "Send graphite address, like 'graphite-1.production.infra.home:2023'")
-	graphiteflushtime = flag.Duration("GraphiteFlush", 1000000000, "Flush every")
-	pgconnstring      = flag.String("PgConnString", "", "Postgresql connection string, like: 'postgres://riemann_face_user@127.0.0.1/riemann_face?sslmode=disable'")
-	pgquery           = flag.String("PgQuery", "SELECT UpdateProblems($1, $2, $3, $4, $5, $6, $7)", "Postgresql query string")
-	pgpool            = flag.Int("PgPool", 40, "Connection pool for pg")
-	statistictime     = flag.Int("StatTime", 0, "Print statistic (s)")
+	"stalin/plugins"
+	_ "stalin/plugins/elastic"
+	_ "stalin/plugins/graphite"
+	_ "stalin/plugins/http"
+	_ "stalin/plugins/opentsdb"
+	_ "stalin/plugins/pgsql"
+	_ "stalin/plugins/router"
+	_ "stalin/plugins/tcp"
+	"syscall"
 )
 
 func main() {
+
 	// run Forest, run
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
+	configPath := flag.String("config", filepath.FromSlash("/etc/stalin.toml"), "Config file.")
 	flag.Parse()
-	log.Println("Listen tcp", *bindto)
-	lst, err := net.Listen("tcp", *bindto)
-	if err != nil {
-		log.Fatal(err)
-	}
-	t, err := transport.NewTransport(*graphiteaddr, *resendaddr, *pgconnstring, *pgquery, *pgpool, *graphiteflushtime, *resendflushtime, *statistictime)
-	if err != nil {
-		log.Fatal(err)
-	}
+	plugins.Run(*configPath)
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGTERM)
+
 	for {
-		conn, err := lst.Accept()
-		if err != nil {
-			log.Println("Listener error:", err)
-		}
-		go t.HandleConn(conn)
+		<-c
+		// todo: hup, usr1
+		os.Exit(1)
 	}
+
 }

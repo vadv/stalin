@@ -1,0 +1,55 @@
+//Generate: protoc --gogo_out=. -I=.:../../dependencies/code.google.com/p/gogoprotobuf/gogoproto:../../dependencies/code.google.com/p/gogoprotobuf/protobuf message.proto
+package message;
+
+import "gogo.proto";
+
+option (gogoproto.sizer_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+
+message State {
+  optional int64 time = 1;
+  optional string state = 2;
+  optional string service = 3;
+  optional string host = 4;
+  optional string description = 5;
+  optional bool once = 6;
+  repeated string tags = 7;
+  optional float ttl = 8;
+}
+
+message Event {
+
+  optional int64  time = 1;
+  optional string state = 2;
+  optional string service = 3;
+  optional string host = 4;
+  optional string description = 5;
+  repeated string tags = 7;
+  optional float  ttl = 8;
+  repeated Attribute attributes = 9;
+
+  optional sint64 metric_sint64 = 13;
+  optional double metric_d = 14;
+  optional float metric_f = 15;
+
+  optional string tsdb_service = 16;
+  repeated string tsdb_tags = 17;
+
+}
+
+message Message {
+  optional bool ok = 2;
+  optional string error = 3;
+  repeated State states = 4;
+  repeated Event events = 6; // основной use-case
+
+  optional string data = 7;
+  optional string data_type = 8;
+
+}
+
+message Attribute {
+  required string key = 1;
+  optional string value = 2;
+}
