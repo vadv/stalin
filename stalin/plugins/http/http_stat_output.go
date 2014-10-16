@@ -67,7 +67,7 @@ func (r *HttpStatOutput) Inject(msg *message.Message) error {
 }
 
 func (r *HttpStatOutput) Run() error {
-	fmt.Printf("[HttpStatOutput]: start at: http://%v%v\n", r.config.Address, r.config.ApiUrl)
+	LogInfo("[HttpStatOutput]: Started at http://%v%v", r.config.Address, r.config.ApiUrl)
 	http.HandleFunc(r.config.ApiUrl, r.apiHandler)
 	go r.tick()
 	if err := http.ListenAndServe(r.config.Address, nil); err != nil {

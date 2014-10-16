@@ -2,7 +2,6 @@ package plugin_http
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"stalin/message"
@@ -53,7 +52,7 @@ func (r *HttpPlayerJsonInput) Inject(msg *message.Message) error {
 }
 
 func (r *HttpPlayerJsonInput) Run() error {
-	fmt.Printf("[HttpPlayerJsonInput]: start at: http://%v%v\n", r.config.Address, r.config.ApiUrl)
+	LogInfo("[HttpPlayerJsonInput]: Started at http://%v%v", r.config.Address, r.config.ApiUrl)
 	http.HandleFunc(r.config.ApiUrl, r.apiHandler)
 	if err := http.ListenAndServe(r.config.Address, nil); err != nil {
 		return err

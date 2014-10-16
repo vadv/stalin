@@ -13,6 +13,7 @@ import (
 	_ "stalin/plugins/opentsdb"
 	_ "stalin/plugins/pgsql"
 	_ "stalin/plugins/router"
+	_ "stalin/plugins/store"
 	_ "stalin/plugins/tcp"
 	"syscall"
 )

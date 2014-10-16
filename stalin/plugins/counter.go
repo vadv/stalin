@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"log"
 	"sync"
 	"time"
 )
@@ -54,7 +53,7 @@ func (c *Counter) clear() {
 }
 
 func (c *Counter) print() {
-	log.Printf("[%v] Input: [%6.2f], Queue: [%6.2f], Drop: [%6.2f]",
+	LogDebug("[%v] Input: [%6.2f], Queue: [%6.2f], Drop: [%6.2f]",
 		c.Name, float64(c.Done)/float64(c.StatTime), float64(c.Queue)/float64(c.StatTime), float64(c.Droped)/float64(c.StatTime))
 }
 

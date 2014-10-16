@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -9,8 +10,8 @@ func Run(filename string) {
 
 	gConfig, err := NewGlobalConfigFromFile(filename)
 	if err != nil {
-		fmt.Println(err)
-		return
+		fmt.Printf("Error while init config: %v\n", err)
+		os.Exit(1)
 	}
 
 	gConfig.Router.Run()
@@ -28,7 +29,7 @@ func Run(filename string) {
 func loopStart(plugin Plugin, name string) {
 	for {
 		if err := plugin.Run(); err != nil {
-			fmt.Printf("Plugin '%v' start failed: %v\n", name, err)
+			LogErr("Plugin '%v' start failed: %v", name, err)
 			time.Sleep(time.Second)
 			continue
 		}

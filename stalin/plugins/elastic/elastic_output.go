@@ -2,7 +2,6 @@ package plugin_elastic
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/mattbaird/elastigo/api"
 	"github.com/mattbaird/elastigo/core"
 	"stalin/message"
@@ -53,6 +52,6 @@ func (r *ElasticOutput) Inject(msg *message.Message) error {
 func (r *ElasticOutput) Run() error {
 	api.Domain = r.config.Host
 	core.VerboseLogging = r.config.Verbose
-	fmt.Printf("[ElasticOutput]: start with %v:%v\n", r.config.Host, r.config.Port)
+	LogInfo("[ElasticOutput]: Started at %v:9300", r.config.Host)
 	return nil
 }

@@ -46,6 +46,7 @@ func (t *TcpOutput) Init(g *GlobalConfig, name string) (Plugin, error) {
 		MaxQueue:       10000,
 		BufferSize:     1024 * 64,
 		MaxMessageSize: 1024 * 64,
+		Statistic:      true,
 		StatisticTime:  1,
 		TickSec:        1,
 	}
@@ -72,7 +73,7 @@ func (t *TcpOutput) connect() error {
 func (t *TcpOutput) loopConnect() {
 	for {
 		if err := t.connect(); err != nil {
-			fmt.Printf("[TCPOut]: Error connect to %v error: %v\n", t.config.Address, err)
+			LogErr("[TCPOut]: Connect to %v error: %v", t.config.Address, err)
 			time.Sleep(time.Second)
 			continue
 		}
@@ -86,7 +87,7 @@ func (t *TcpOutput) reciveAndTick() {
 		select {
 		case <-t.tickchan:
 			if err := t.writer.Flush(); err != nil {
-				fmt.Printf("[TCPOut]: Error to flush: %v\n", err)
+				LogErr("[TCPOut]: Flush: %v\n", err)
 			}
 		case data := <-t.ichan:
 			if _, err := t.writer.Write(data); err != nil {
@@ -115,7 +116,7 @@ func (t *TcpOutput) Inject(msg *message.Message) error {
 func (t *TcpOutput) Run() error {
 	t.ichan = make(chan []byte, 10000)
 	t.tickchan = time.Tick(t.tick)
-	fmt.Printf("[TCPOut]: name: %v with addr:%v\n", t.config.Name, t.config.Address)
+	LogInfo("[TCPOut]: Started with address %v", t.config.Name, t.config.Address)
 	t.reciveAndTick()
 	return nil
 }

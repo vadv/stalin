@@ -71,7 +71,7 @@ func (t *OpentsdbOutput) connect() error {
 func (t *OpentsdbOutput) loopConnect() {
 	for {
 		if err := t.connect(); err != nil {
-			fmt.Printf("[OpentsdbOut]: Error connect to %v error: %v\n", t.config.Address, err)
+			LogErr("[OpentsdbOut]: Connect to %v error: %v", t.config.Address, err)
 			time.Sleep(time.Second)
 			continue
 		}
@@ -85,7 +85,7 @@ func (t *OpentsdbOutput) reciveAndTick() {
 		select {
 		case <-t.tickchan:
 			if err := t.writer.Flush(); err != nil {
-				fmt.Printf("[OpentsdbOut]: Error to flush: %v\n", err)
+				LogErr("[OpentsdbOut]: Flush: %v\n", err)
 			}
 		case data := <-t.ichan:
 			if _, err := t.writer.Write(data); err != nil {
@@ -114,7 +114,7 @@ func (t *OpentsdbOutput) Inject(msg *message.Message) error {
 func (t *OpentsdbOutput) Run() error {
 	t.ichan = make(chan []byte, 10000)
 	t.tickchan = time.Tick(t.tick)
-	fmt.Printf("[OpentsdbOut]: name: %v with addr:%v\n", t.config.Name, t.config.Address)
+	LogInfo("[OpentsdbOut]: Started with address %v", t.config.Address)
 	t.reciveAndTick()
 	return nil
 }

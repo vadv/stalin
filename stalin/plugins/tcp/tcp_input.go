@@ -54,7 +54,7 @@ func (t *TcpInput) runListen() error {
 
 	listener, err := net.Listen(t.config.Net, t.config.Address)
 	if err != nil {
-		return fmt.Errorf("ListenTCP failed: %s\n", err.Error())
+		return fmt.Errorf("[TcpInput]: ListenTCP failed: %s\n", err.Error())
 	}
 
 	t.listener = listener
@@ -72,16 +72,18 @@ func (t *TcpInput) handleConnection(conn net.Conn) {
 		t.wg.Done()
 	}()
 
+	LogDebug("[TCPInput]: New client: %v", conn.RemoteAddr())
+
 	for {
 		msg := &message.Message{}
 		data, err := message.Unpack(conn)
 		if err != nil {
-			fmt.Printf("Error decoding protobuf message from client: %v error: %v\n", conn.RemoteAddr(), err.Error())
+			LogErr("[TCPInput]: Decoding message from client: %v error: %v", conn.RemoteAddr(), err.Error())
 			return
 		}
 		err = proto.Unmarshal(data, msg)
 		if err != nil {
-			fmt.Printf("Error decoding protobuf message from client: %v error: %v\n", conn.RemoteAddr(), err.Error())
+			LogErr("[TCPInput]: Unmarshal message from client: %v error: %v", conn.RemoteAddr(), err.Error())
 			return
 		}
 		t.gConfig.Output(msg)
@@ -97,16 +99,16 @@ func (t *TcpInput) Run() error {
 	var conn net.Conn
 	var e error
 
-	fmt.Printf("[TCPInput]: name: %v with addr:%v\n", t.config.Name, t.config.Address)
+	LogInfo("[TCPInput]: Started at: %v", t.config.Address)
 
 	for {
 
 		if conn, e = t.listener.Accept(); e != nil {
 			if e.(net.Error).Temporary() {
-				fmt.Printf("TCP accept failed: %s", e)
+				LogErr("[TCPInput]: TCP accept failed: %s", e)
 				continue
 			} else {
-				fmt.Printf("TCP accept error: %s", e)
+				LogErr("[TCPInput]: TCP accept error: %s", e)
 				break
 			}
 		}

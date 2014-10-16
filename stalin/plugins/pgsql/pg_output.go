@@ -38,6 +38,7 @@ func (t *PgOutput) Init(g *GlobalConfig, name string) (Plugin, error) {
 		Connection:    "postgres://riemann_face_user@127.0.0.1/riemann_face?sslmode=disable",
 		Query:         "SELECT UpdateProblems($1, $2, $3, $4, $5, $6, $7)",
 		PoolSize:      40,
+		Statistic:     true,
 		StatisticTime: 1,
 	}
 	if err := json.Unmarshal(g.PluginConfigs[name], config); err != nil {
@@ -70,7 +71,7 @@ func (p *PgOutput) eventToPg(event *message.Event) {
 		event.GetSQLTags(),
 	)
 	if err != nil {
-		fmt.Printf("[PGOut]: error: %v\n", err)
+		LogErr("[PGOut]: Query %v", err)
 	} else {
 		rows.Close()
 	}
@@ -97,6 +98,6 @@ func (t *PgOutput) Run() error {
 	db.SetMaxIdleConns(t.config.PoolSize)
 	db.Prepare(t.config.Query)
 	t.db = db
-	fmt.Printf("[PGOut]: name: %v, connection string: %v\n", t.config.Name, t.config.Connection)
+	LogInfo("[PGOut]: Started with connection string: %v", t.config.Connection)
 	return nil
 }

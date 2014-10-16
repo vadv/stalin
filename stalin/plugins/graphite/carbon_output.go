@@ -45,6 +45,7 @@ func (t *CarbonOutput) Init(g *GlobalConfig, name string) (Plugin, error) {
 		MaxQueue:       10000,
 		BufferSize:     1024 * 64,
 		MaxMessageSize: 1024 * 64,
+		Statistic:      true,
 		StatisticTime:  1,
 		TickSec:        1,
 	}
@@ -71,7 +72,7 @@ func (t *CarbonOutput) connect() error {
 func (t *CarbonOutput) loopConnect() {
 	for {
 		if err := t.connect(); err != nil {
-			fmt.Printf("[CarbonOut]: Error connect to %v error: %v\n", t.config.Address, err)
+			LogErr("[CarbonOut]: Connect to %v error: %v", t.config.Address, err)
 			time.Sleep(time.Second)
 			continue
 		}
@@ -85,7 +86,7 @@ func (t *CarbonOutput) reciveAndTick() {
 		select {
 		case <-t.tickchan:
 			if err := t.writer.Flush(); err != nil {
-				fmt.Printf("[CarbonOut]: Error to flush: %v\n", err)
+				LogErr("[CarbonOut]: Flush: %v", err)
 			}
 		case data := <-t.ichan:
 			if _, err := t.writer.Write(data); err != nil {
@@ -114,7 +115,7 @@ func (t *CarbonOutput) Inject(msg *message.Message) error {
 func (t *CarbonOutput) Run() error {
 	t.ichan = make(chan []byte, 10000)
 	t.tickchan = time.Tick(t.tick)
-	fmt.Printf("[CarbonOut]: name: %v with addr:%v\n", t.config.Name, t.config.Address)
+	LogInfo("[CarbonOut]: Started with address %v", t.config.Address)
 	t.reciveAndTick()
 	return nil
 }

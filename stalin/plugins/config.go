@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"github.com/bbangert/toml"
 	"io/ioutil"
-	"log"
 	"regexp"
 	"stalin/message"
+	"strings"
 )
 
 type GlobalConfig struct {
@@ -14,6 +14,7 @@ type GlobalConfig struct {
 	Inputs        map[string]Plugin
 	Router        Plugin
 	PluginConfigs map[string][]byte
+	StalinConfig  *DaemonConfig
 }
 
 type PluginConfig map[string]toml.Primitive
@@ -38,6 +39,7 @@ func NewGlobalConfigFromFile(filename string) (*GlobalConfig, error) {
 		Outputs:       make(map[string]Plugin),
 		Inputs:        make(map[string]Plugin),
 		PluginConfigs: make(map[string][]byte),
+		StalinConfig:  RuntimeStalinConfig,
 	}
 
 	// пробегаемся по конфигу, заполняем Input и Ouput
@@ -45,19 +47,26 @@ func NewGlobalConfigFromFile(filename string) (*GlobalConfig, error) {
 
 		configSection = nil
 		if err := toml.PrimitiveDecode(conf, &configSection); err != nil {
-			log.Printf("Can't decode '%v', section: %#v\n", name, conf)
+			LogErr("Can't decode '%v', section: %#v", name, conf)
 			return nil, err
 		}
 
+		if strings.ToLower(name) == "stalin" {
+			if err := gConfig.StalinConfig.SetConfig(configSection); err != nil {
+				LogErr("Can't set stalin config: %v", err)
+			}
+			continue
+		}
+
 		if err := toml.PrimitiveDecode(configSection["type"], &pluginType); err != nil {
-			log.Printf("Can't get type for section name : %v\n", name)
+			LogErr("Can't get type for section name: %v", name)
 			continue
 		}
 
 		// пытаемся создать плагин
 		plugin, err := pluginFromName(pluginType)
 		if err != nil {
-			log.Printf("Init plugin '%v' fatal error: %v\n", pluginType, err)
+			LogErr("Init plugin '%v' fatal error: %v", pluginType, err)
 			return nil, err
 		} else {
 			// плагин создался без ошибки
@@ -102,10 +111,6 @@ func NewGlobalConfigFromFile(filename string) (*GlobalConfig, error) {
 	return gConfig, nil
 }
 
-func (g *GlobalConfig) Output(msg *message.Message) {
-	go g.Router.Inject(msg)
-}
-
 var PluginTypeRegex = regexp.MustCompile("(Router|Input|Output)$")
 
 func getPluginCategory(pluginType string) string {
@@ -114,4 +119,8 @@ func getPluginCategory(pluginType string) string {
 		return ""
 	}
 	return pluginCats[1]
+}
+
+func (g *GlobalConfig) Output(msg *message.Message) {
+	go g.Router.Inject(msg)
 }
