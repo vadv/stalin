@@ -1,63 +1,71 @@
-package memory
+package storage
 
 import (
 	"encoding/gob"
+	"io/ioutil"
 	"os"
-	. "stalin/plugins"
-	"stalin/plugins/store/cache"
-	. "stalin/plugins/store/problem"
-	"sync"
+	"path/filepath"
 	"time"
+
+	. "stalin/plugins"
+	. "stalin/plugins/store/query_language"
 )
 
 type Store struct {
-	FileName string
-	Items    *cache.Cache
-	mutex    sync.RWMutex
+	DBPath string
+	Items  *Cache
+	Log    *Logger
 }
 
-func NewStore(defaultTtl, janitorTtl time.Duration) *Store {
-	store := &Store{Items: cache.New(defaultTtl, janitorTtl)}
+func (s *Store) Filename() string {
+	return filepath.Join(s.DBPath, "store.gob")
+}
+
+func NewStore(dbpath string, janitorTtl time.Duration, log *Logger) (*Store, error) {
+	store := &Store{
+		Items:  NewCache(janitorTtl),
+		DBPath: dbpath,
+		Log:    log,
+	}
 	gob.Register(&Problem{})
-	return store
+	return store, store.Init()
+}
+
+func (s *Store) Init() error {
+	if fd, err := os.Open(s.Filename()); err != nil {
+		return s.save()
+	} else {
+		defer fd.Close()
+		return s.load()
+	}
+}
+
+func (s *Store) Save() error {
+	return s.save()
 }
 
 func (s *Store) SetProblem(p2 *Problem) {
 	p1, found := s.Items.Get(p2.Key)
 	if found {
 		p2.UpdateLastFail(p1)
-		p1 = nil
 	}
 	s.Items.Set(p2.Key, p2, time.Duration(p2.Ttl)*time.Second)
 }
 
-func (s *Store) Init() error {
-	if _, err := os.Open(s.FileName); err != nil {
-		return s.Save()
-	} else {
-		return s.Load()
-	}
-}
-
-func (s *Store) Save() error {
-	// сохраняем во временный файл
-	tempfile := s.FileName + ".tmp-copy"
-	fd, err := os.Create(tempfile)
+func (s *Store) save() error {
+	tempfile, err := ioutil.TempFile(s.DBPath, "tmp-")
 	if err != nil {
 		return err
 	}
-	tBegin := time.Now()
-	LogInfo("[MemStore]: Background save to file: %v, items count: %v", tempfile, len(s.Items.Items()))
-	if err = s.Items.Save(fd); err != nil {
-		LogErr("[MemStore]: Save in file: %v, spend time: %v. Error: %v", tempfile, time.Now().Sub(tBegin), err)
+	savecache := NewCacheFrom(0, s.Items.List())
+	if err := savecache.Save(tempfile); err != nil {
 		return err
 	}
-	LogInfo("[MemStore]: Succesfull save to file: %v, spend time: %v", tempfile, time.Now().Sub(tBegin))
-	return os.Rename(fd.Name(), s.FileName)
+	tempfile.Close()
+	savecache = nil
+	return os.Rename(tempfile.Name(), s.Filename())
 }
 
-func (s *Store) Load() error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	return s.Items.LoadFile(s.FileName)
+func (s *Store) load() error {
+	return s.Items.LoadFile(s.Filename())
 }

@@ -1,122 +1,59 @@
-package plugin_tcp
+package tcp
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/json"
-	"fmt"
 	"net"
-	"stalin/message"
+
+	"stalin/events"
 	. "stalin/plugins"
-	"time"
 )
 
 func init() {
-	RegisterPlugin("TcpOutput", new(TcpOutput))
+	Plugin.Creator(newTcpOutput).Type("TcpOutput").Description("Send external messages to address (use protobuf)").Register()
 }
 
 type TcpOutput struct {
-	config   *TcpOutputConfig
-	gConfig  *GlobalConfig
-	conn     net.Conn
-	ichan    chan []byte
-	writer   *bufio.Writer
-	tick     time.Duration
-	tickchan <-chan time.Time
-	Stat     *Counter
+	buffWriter *events.BuffWriter
+	Log        *Logger `json:"-"`
+	Address    string  `json:"address" description:"Address for connect"`
+	Size       int     `json:"buffer" description:"Buffer size in bytes"`
+	Flush      int     `json:"flush" description:"Time for periodic flush (in ms)"`
+	Reconnect  int     `json:"reconnect" description:"Sleep time before reconnect (in ms)"`
+	errChan    chan error
 }
 
-type TcpOutputConfig struct {
-	Name           string `json:"name"`
-	Address        string `json:"address"`
-	TickSec        int    `json:"tick"`
-	MaxQueue       int    `json:"max_queue"`
-	BufferSize     int    `json:"buff_size"`
-	MaxMessageSize int    `json:"max_message_size"`
-	Statistic      bool   `json:"statistic"`
-	StatisticTime  int    `json:"statistic_time"`
+func (t *TcpOutput) Connect() (net.Conn, error) {
+	return net.Dial("tcp", t.Address)
 }
 
-func (t *TcpOutput) Init(g *GlobalConfig, name string) (Plugin, error) {
-	plugin := &TcpOutput{gConfig: g}
-	// make default config
-	config := &TcpOutputConfig{
-		Address:        "riemann.undev.cc:5555",
-		Name:           name,
-		MaxQueue:       10000,
-		BufferSize:     1024 * 64,
-		MaxMessageSize: 1024 * 64,
-		Statistic:      true,
-		StatisticTime:  1,
-		TickSec:        1,
-	}
-	if err := json.Unmarshal(g.PluginConfigs[name], config); err != nil {
-		return nil, err
-	}
-	plugin.tick = time.Duration(config.TickSec) * time.Second
-	plugin.config = config
-	plugin.Stat = NewCounter(name, config.StatisticTime, config.Statistic)
-	plugin.Stat.Start()
-	return plugin, nil
-}
-
-func (t *TcpOutput) connect() error {
-	conn, err := net.Dial("tcp", t.config.Address)
-	if err != nil {
-		return err
-	}
-	t.conn = conn
-	t.writer = bufio.NewWriterSize(t.conn, t.config.BufferSize)
+func (t *TcpOutput) Inject(events *events.Events) error {
+	t.buffWriter.Inject(&buffWriterEvent{Events: events})
 	return nil
 }
 
-func (t *TcpOutput) loopConnect() {
-	for {
-		if err := t.connect(); err != nil {
-			LogErr("[TCPOut]: Connect to %v error: %v", t.config.Address, err)
-			time.Sleep(time.Second)
-			continue
-		}
-		break
+func newTcpOutput(name string) PluginInterface {
+	return &TcpOutput{
+		Log:       NewLog(name),
+		Address:   "127.0.0.1:5555",
+		Size:      1024 * 64,
+		Flush:     500,
+		Reconnect: 500,
+		errChan:   make(chan error),
 	}
 }
 
-func (t *TcpOutput) reciveAndTick() {
-	t.loopConnect()
+func (t *TcpOutput) Start() error {
+
+	t.buffWriter = events.NewBuffWriter(t.Connect, t.errChan, t.Flush, t.Reconnect, t.Size)
+	go t.buffWriter.Run()
+
+	t.Log.Info("Start for address: %v", t.Address)
+
 	for {
 		select {
-		case <-t.tickchan:
-			if err := t.writer.Flush(); err != nil {
-				LogErr("[TCPOut]: Flush: %v\n", err)
-			}
-		case data := <-t.ichan:
-			if _, err := t.writer.Write(data); err != nil {
-				t.loopConnect()
-			}
+		case err := <-t.errChan:
+			t.Log.Error("Error: %v", err)
 		}
 	}
-}
 
-func (t *TcpOutput) Inject(msg *message.Message) error {
-	if t.Stat.QueueSize() > t.config.MaxQueue {
-		t.Stat.UpDropped()
-		return fmt.Errorf("Max queue size error")
-	}
-	t.Stat.In()
-	buf := &bytes.Buffer{}
-	enc := message.NewEncoder(buf)
-	if err := enc.EncodeMsg(msg); err != nil {
-		return err
-	}
-	t.ichan <- buf.Bytes()
-	t.Stat.Out()
-	return nil
-}
-
-func (t *TcpOutput) Run() error {
-	t.ichan = make(chan []byte, 10000)
-	t.tickchan = time.Tick(t.tick)
-	LogInfo("[TCPOut]: Started with address %v", t.config.Name, t.config.Address)
-	t.reciveAndTick()
 	return nil
 }
