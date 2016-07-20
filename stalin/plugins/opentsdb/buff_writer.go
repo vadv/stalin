@@ -16,7 +16,7 @@ type buffWriterEvent struct {
 
 func (b *buffWriterEvent) toTsdb() []byte {
 	service := *(b.Event.TsdbService)
-	metric := b.Event.Metric()
+	metric := *(b.Event.Metric())
 	time := *(b.Event.Time)
 	tags := ""
 	for _, tag := range b.Event.TsdbTags {
