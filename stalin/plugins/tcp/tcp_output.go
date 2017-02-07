@@ -18,6 +18,7 @@ type TcpOutput struct {
 	Size       int     `json:"buffer" description:"Buffer size in bytes"`
 	Flush      int     `json:"flush" description:"Time for periodic flush (in ms)"`
 	Reconnect  int     `json:"reconnect" description:"Sleep time before reconnect (in ms)"`
+	QueueSize  int     `json:"queue_size" description:"Max queue size"`
 	errChan    chan error
 }
 
@@ -37,13 +38,14 @@ func newTcpOutput(name string) PluginInterface {
 		Size:      1024 * 64,
 		Flush:     500,
 		Reconnect: 500,
+		QueueSize: 64 * 1024,
 		errChan:   make(chan error),
 	}
 }
 
 func (t *TcpOutput) Start() error {
 
-	t.buffWriter = events.NewBuffWriter(t.Connect, t.errChan, t.Flush, t.Reconnect, t.Size)
+	t.buffWriter = events.NewBuffWriter(t.Connect, t.errChan, t.Flush, t.Reconnect, t.Size, t.QueueSize)
 	go t.buffWriter.Run()
 
 	t.Log.Info("Start for address: %v", t.Address)
@@ -51,9 +53,7 @@ func (t *TcpOutput) Start() error {
 	for {
 		select {
 		case err := <-t.errChan:
-			t.Log.Error("Error: %v", err)
+			t.Log.Errorf("Error: %v", err)
 		}
 	}
-
-	return nil
 }

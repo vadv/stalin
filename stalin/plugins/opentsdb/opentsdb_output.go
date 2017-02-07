@@ -18,6 +18,7 @@ type OpentsdbOutput struct {
 	Size       int     `json:"buffer" description:"Buffer size in bytes"`
 	Flush      int     `json:"flush" description:"Time for periodic flush (in ms)"`
 	Reconnect  int     `json:"reconnect" description:"Sleep time before reconnect (in ms)"`
+	QueueSize  int     `json:"queue_size" description:"Max queue size"`
 	errChan    chan error
 }
 
@@ -40,12 +41,13 @@ func newOpentsdbOutput(name string) PluginInterface {
 		Size:      1024 * 64,
 		Flush:     500,
 		Reconnect: 500,
+		QueueSize: 64 * 1024,
 	}
 }
 
 func (c *OpentsdbOutput) Start() error {
 
-	c.buffWriter = events.NewBuffWriter(c.Connect, c.errChan, c.Flush, c.Reconnect, c.Size)
+	c.buffWriter = events.NewBuffWriter(c.Connect, c.errChan, c.Flush, c.Reconnect, c.Size, c.QueueSize)
 	go c.buffWriter.Run()
 
 	c.Log.Info("Start for address: %v", c.Address)
@@ -53,9 +55,8 @@ func (c *OpentsdbOutput) Start() error {
 	for {
 		select {
 		case err := <-c.errChan:
-			c.Log.Error("Error: %v", err)
+			c.Log.Errorf("Error: %v", err)
 		}
 	}
 
-	return nil
 }

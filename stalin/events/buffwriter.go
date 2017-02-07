@@ -2,6 +2,7 @@ package events
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"time"
 )
@@ -19,9 +20,11 @@ type BuffWriter struct {
 	connBuild      func() (net.Conn, error)
 	writer         *bufio.Writer
 	conn           net.Conn
+	maxQueueSize   int
+	queueSize      int
 }
 
-func NewBuffWriter(connBuild func() (net.Conn, error), errChan chan error, flush, sleep, size int) *BuffWriter {
+func NewBuffWriter(connBuild func() (net.Conn, error), errChan chan error, flush, sleep, size, queue int) *BuffWriter {
 	return &BuffWriter{
 		connBuild:      connBuild,
 		errChan:        errChan,
@@ -29,6 +32,7 @@ func NewBuffWriter(connBuild func() (net.Conn, error), errChan chan error, flush
 		flushTime:      time.Duration(flush) * time.Millisecond,
 		writerSize:     size,
 		slReconectTime: time.Duration(flush) * time.Millisecond,
+		maxQueueSize:   queue,
 	}
 }
 
@@ -47,7 +51,15 @@ func (b *BuffWriter) loopConnect() {
 }
 
 func (b *BuffWriter) Inject(e BuffWriterEvent) {
-	b.eventChan <- e
+	b.queueSize++
+	if b.queueSize > b.maxQueueSize {
+		if b.queueSize%100 == 0 {
+			b.errChan <- fmt.Errorf("queue size limit")
+		}
+	} else {
+		b.eventChan <- e
+	}
+	b.queueSize--
 }
 
 func (b *BuffWriter) Run() {
